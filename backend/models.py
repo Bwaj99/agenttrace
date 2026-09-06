@@ -1,15 +1,16 @@
 """
-Backend-side SQLAlchemy models.
+Backend-side model re-export.
 
-These read against the exact same schema the SDK writes
-(sdk/agenttrace/models.py). In Phase 3 we'll decide whether to:
-  (a) import the SDK's models directly (backend depends on
-      agenttrace-sdk being installed), or
-  (b) mirror them here to keep backend/ deployable independently.
+The backend reads the exact same schema the SDK writes
+(sdk/agenttrace/models.py). Importing the classes directly here —
+rather than redefining them — means the reader (backend) and the
+writer (SDK) can never drift out of sync with each other.
 
-Leaning towards (a) for v1 to avoid schema drift, since both live in
-the same repo/monorepo and the backend already needs the SDK's models
-to reflect the tables.
+Requires `agenttrace-sdk` to be installed (`pip install -e ../sdk`,
+already listed as a dependency in requirements.txt as a path
+requirement / installed explicitly in the Dockerfile).
 """
 
-# TODO(Phase 3): import or mirror Run, Step, StepReplay models here.
+from agenttrace.models import Base, Run, Step, StepReplay
+
+__all__ = ["Base", "Run", "Step", "StepReplay"]

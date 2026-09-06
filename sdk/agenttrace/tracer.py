@@ -107,21 +107,50 @@ def _estimate_cost(model: Optional[str], prompt_tokens: int, completion_tokens: 
     return None
 
 
-def _try_extract_llm_usage(result) -> Optional[dict]:
+def _extract_text(result) -> Optional[str]:
+    """Best-effort extraction of the human-readable text from an OpenAI
+    or Anthropic SDK response object (used only for the *stored* trace
+    output — the caller's actual return value is never touched)."""
+    # OpenAI chat/completions: result.choices[0].message.content
+    choices = getattr(result, "choices", None)
+    if choices:
+        message = getattr(choices[0], "message", None)
+        content = getattr(message, "content", None) if message else None
+        if content is not None:
+            return content
+
+    # Anthropic messages: result.content is a list of blocks with .text
+    content_blocks = getattr(result, "content", None)
+    if isinstance(content_blocks, list):
+        texts = [getattr(block, "text", None) for block in content_blocks]
+        texts = [t for t in texts if t]
+        if texts:
+            return "".join(texts)
+
+    return None
+
+
+def _try_extract_llm_response(result) -> Optional[dict]:
     """
-    Best-effort detection of token usage from a raw OpenAI or Anthropic
-    SDK response object, so `@trace_step` on an LLM call "just works"
-    without the caller doing anything extra.
+    Best-effort detection of an OpenAI or Anthropic SDK response object,
+    so `@trace_step` on an LLM call "just works" without the caller
+    doing anything extra: token usage is extracted for the cost/latency
+    summary, and a clean {"text", "model"} dict replaces the raw SDK
+    object as the *stored* step output (the raw object is still what's
+    returned to the caller — only what gets written to SQLite changes),
+    since the raw object usually isn't cleanly JSON-serializable and a
+    plain str() dump isn't useful in the dashboard or for replay.
 
     Returns None if `result` doesn't look like a recognized LLM
     response shape — the caller can still attach usage manually via
-    `record_usage(...)`.
+    `record_usage(...)`, and the raw return value is stored as-is.
     """
     usage = getattr(result, "usage", None)
     if usage is None:
         return None
 
     model = getattr(result, "model", None)
+    text = _extract_text(result)
 
     # OpenAI chat/completions response: usage.prompt_tokens / completion_tokens
     if hasattr(usage, "prompt_tokens") and hasattr(usage, "completion_tokens"):
@@ -131,6 +160,8 @@ def _try_extract_llm_usage(result) -> Optional[dict]:
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens,
             "estimated_cost": _estimate_cost(model, prompt_tokens, completion_tokens),
+            "model": model,
+            "text": text,
         }
 
     # Anthropic messages response: usage.input_tokens / output_tokens
@@ -141,6 +172,8 @@ def _try_extract_llm_usage(result) -> Optional[dict]:
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens,
             "estimated_cost": _estimate_cost(model, prompt_tokens, completion_tokens),
+            "model": model,
+            "text": text,
         }
 
     return None
@@ -363,14 +396,19 @@ class trace_step:
             # function, so per-call state must not live on it.
             with trace_step(self.name, self.step_type, input=call_input) as step:
                 result = func(*args, **kwargs)
-                usage = _try_extract_llm_usage(result)
-                if usage is not None:
+                llm_info = _try_extract_llm_response(result)
+                if llm_info is not None:
                     step.record_usage(
-                        prompt_tokens=usage["prompt_tokens"],
-                        completion_tokens=usage["completion_tokens"],
-                        cost=usage["estimated_cost"],
+                        prompt_tokens=llm_info["prompt_tokens"],
+                        completion_tokens=llm_info["completion_tokens"],
+                        cost=llm_info["estimated_cost"],
                     )
-                step.set_output(result)
+                    # Store the clean {model, text} shape rather than the
+                    # raw SDK object — `result` itself (returned below)
+                    # is untouched, so callers see the real response.
+                    step.set_output({"model": llm_info["model"], "text": llm_info["text"]})
+                else:
+                    step.set_output(result)
                 return result
 
         return wrapper

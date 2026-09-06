@@ -1,38 +1,49 @@
 # AgentTrace docker-compose.yml
 #
-# Placeholder — full wiring happens in Phase 6. Planned shape:
-#
-# services:
-#   backend:
-#     build: ./backend
-#     ports:
-#       - "8000:8000"
-#     volumes:
-#       - trace-data:/data          # shared SQLite file lives here
-#     environment:
-#       - AGENTTRACE_DB_PATH=/data/agenttrace.db
-#
-#   frontend:
-#     build: ./frontend
-#     ports:
-#       - "3000:3000"
-#     environment:
-#       - NEXT_PUBLIC_API_URL=http://localhost:8000
-#     depends_on:
-#       - backend
-#
-#   demo-agent:
-#     build: ./demo-agent
-#     volumes:
-#       - trace-data:/data          # writes into the same SQLite file
-#     environment:
-#       - AGENTTRACE_DB_PATH=/data/agenttrace.db
-#       - OPENAI_API_KEY=${OPENAI_API_KEY}
-#       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-#     profiles: ["tools"]           # not started by `docker compose up`;
-#                                    # run on demand via `docker compose run demo-agent`
-#
-# volumes:
-#   trace-data:
+# `docker compose up` brings up backend + frontend (viewable at
+# localhost:3000 immediately, even with an empty run list).
+# `docker compose run demo-agent "some topic"` is a one-off command
+# that populates real trace data into the same shared SQLite file.
 
-version: "3.9"
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - trace-data:/data
+    environment:
+      - AGENTTRACE_DB_PATH=/data/agenttrace.db
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  demo-agent:
+    build:
+      context: .
+      dockerfile: demo-agent/Dockerfile
+    volumes:
+      - trace-data:/data
+    environment:
+      - AGENTTRACE_DB_PATH=/data/agenttrace.db
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    # Not started by `docker compose up` — this service only runs via
+    # `docker compose run demo-agent`, on demand, to generate a trace.
+    profiles:
+      - tools
+
+volumes:
+  trace-data:

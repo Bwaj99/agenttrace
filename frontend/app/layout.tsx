@@ -1,20 +1,17 @@
-/**
- * Root layout for the AgentTrace Next.js app.
- *
- * Planned (Phase 5): global styles (Tailwind), page shell/nav, and
- * shared metadata (title: "AgentTrace").
- */
+import type { Metadata } from "next";
+import "./globals.css";
 
-// TODO(Phase 5): implement the root layout, import globals.css once
-// Tailwind is wired up.
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export const metadata: Metadata = {
+  title: "AgentTrace",
+  description: "Local-first observability and replay for LLM agent pipelines.",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
+        {children}
+      </body>
     </html>
   );
 }

@@ -1,0 +1,27 @@
+# Keeps the Docker build context small and, more importantly, keeps
+# host-built artifacts out of the containers — e.g. frontend/Dockerfile
+# does `COPY frontend/ .` after installing node_modules *inside* the
+# Linux build stage; without this, a local `npm install` done on the
+# host (Windows/macOS binaries for swc/esbuild) would get copied over
+# and silently break the container's build.
+
+# Python
+**/__pycache__/
+**/*.pyc
+.venv/
+**/*.egg-info/
+
+# Node
+**/node_modules/
+**/.next/
+
+# Local trace data / demo agent output
+*.db
+*.db-journal
+demo-agent/output/
+
+# VCS / editor
+.git/
+.gitignore
+.vscode/
+.idea/

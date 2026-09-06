@@ -6,7 +6,6 @@ build-backend = "setuptools.build_meta"
 name = "agenttrace-sdk"
 version = "0.1.0"
 description = "Lightweight instrumentation SDK for tracing multi-step LLM agent pipelines locally."
-readme = "../README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 dependencies = [

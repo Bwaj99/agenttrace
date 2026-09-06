@@ -1,49 +1,112 @@
 """
 SQLAlchemy models for the AgentTrace schema.
 
-This is the single source of truth for the `runs` and `steps` tables.
-The FastAPI backend (backend/models.py) will import or mirror these
-same models so both the SDK (writer) and the backend (reader) agree on
-schema — they share one SQLite file via a Docker volume.
+This is the single source of truth for the `runs`, `steps`, and
+`step_replays` tables. The FastAPI backend imports these same classes
+(rather than redefining them) so the SDK (writer) and the backend
+(reader) can never drift apart — they share one SQLite file via a
+Docker volume.
 
-Planned schema (Phase 2):
+All timestamp columns are naive UTC datetimes (we always construct
+them with `datetime.now(timezone.utc)` and store the value as-is;
+SQLite has no native timezone-aware type, so keeping everything UTC
+by convention avoids ambiguity).
 
-    class Run(Base):
-        __tablename__ = "runs"
-        id: str (uuid, primary key)
-        name: str
-        started_at: datetime
-        ended_at: datetime | None
-        status: str            # "running" | "completed" | "failed"
-        metadata_json: str     # JSON-serialized dict
-
-    class Step(Base):
-        __tablename__ = "steps"
-        id: str (uuid, primary key)
-        run_id: str (FK -> runs.id)
-        parent_step_id: str | None (FK -> steps.id)   # enables nesting
-        name: str
-        step_type: str          # "llm_call" | "tool_call" | "custom"
-        started_at: datetime
-        ended_at: datetime | None
-        duration_ms: int | None
-        input_json: str         # truncated, serialized
-        output_json: str        # truncated, serialized
-        error: str | None
-        token_usage_json: str | None  # {prompt_tokens, completion_tokens, estimated_cost}
-
-    class StepReplay(Base):
-        __tablename__ = "step_replays"
-        id: str (uuid, primary key)
-        original_step_id: str (FK -> steps.id)
-        requested_at: datetime
-        modified_input_json: str
-        output_json: str
-        error: str | None
-        token_usage_json: str | None
-
-Replays are stored as their own rows linked to the original step
-(never overwriting history), per the product spec.
+JSON-ish fields (`metadata_json`, `input_json`, `output_json`,
+`token_usage_json`, `modified_input_json`) are stored as TEXT
+containing a JSON string, already truncated/serialized by
+`storage.truncate()` before being written. Callers reading them back
+just `json.loads()` the column.
 """
 
-# TODO(Phase 2): define Base, Run, Step, StepReplay with SQLAlchemy.
+import uuid
+
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import declarative_base, relationship
+
+Base = declarative_base()
+
+
+def _new_id() -> str:
+    """Generate a URL-safe unique id for a run/step/replay row."""
+    return uuid.uuid4().hex
+
+
+class Run(Base):
+    """One full agent execution, started by `Tracer.start_run(...)`."""
+
+    __tablename__ = "runs"
+
+    id = Column(String, primary_key=True, default=_new_id)
+    name = Column(String, nullable=False)
+    started_at = Column(DateTime, nullable=False)
+    ended_at = Column(DateTime, nullable=True)
+    # "running" while in progress, then "completed" or "failed" on exit.
+    status = Column(String, nullable=False, default="running")
+    # Arbitrary caller-supplied metadata (e.g. {"agent_version": "..."}),
+    # JSON-serialized. Defaults to an empty object, never NULL.
+    metadata_json = Column(Text, nullable=False, default="{}")
+
+    steps = relationship(
+        "Step", back_populates="run", cascade="all, delete-orphan"
+    )
+
+
+class Step(Base):
+    """
+    A single traced unit of work (an LLM call, a tool call, or any
+    custom function) within a run. `parent_step_id` is nullable and
+    self-referential, which is what lets the dashboard render a tree
+    instead of a flat list.
+    """
+
+    __tablename__ = "steps"
+
+    id = Column(String, primary_key=True, default=_new_id)
+    run_id = Column(String, ForeignKey("runs.id"), nullable=False, index=True)
+    parent_step_id = Column(
+        String, ForeignKey("steps.id"), nullable=True, index=True
+    )
+    name = Column(String, nullable=False)
+    # "llm_call" | "tool_call" | "custom" — the backend/frontend key off
+    # this to decide, e.g., whether the "Replay" button applies.
+    step_type = Column(String, nullable=False, default="custom")
+    started_at = Column(DateTime, nullable=False)
+    ended_at = Column(DateTime, nullable=True)
+    duration_ms = Column(Integer, nullable=True)
+    input_json = Column(Text, nullable=True)
+    output_json = Column(Text, nullable=True)
+    # Full traceback text if the step raised; NULL on success.
+    error = Column(Text, nullable=True)
+    # {"prompt_tokens": int, "completion_tokens": int, "estimated_cost": float}
+    # JSON-serialized; NULL for non-LLM steps or when usage couldn't be
+    # determined.
+    token_usage_json = Column(Text, nullable=True)
+
+    run = relationship("Run", back_populates="steps")
+    replays = relationship(
+        "StepReplay", back_populates="original_step", cascade="all, delete-orphan"
+    )
+
+
+class StepReplay(Base):
+    """
+    A single replay attempt against an existing `Step` (v1 only
+    supports replaying step_type == "llm_call"). Replays are additive
+    — each attempt gets its own row here, never overwriting the
+    original step, so history is preserved for diffing.
+    """
+
+    __tablename__ = "step_replays"
+
+    id = Column(String, primary_key=True, default=_new_id)
+    original_step_id = Column(
+        String, ForeignKey("steps.id"), nullable=False, index=True
+    )
+    requested_at = Column(DateTime, nullable=False)
+    modified_input_json = Column(Text, nullable=False)
+    output_json = Column(Text, nullable=True)
+    error = Column(Text, nullable=True)
+    token_usage_json = Column(Text, nullable=True)
+
+    original_step = relationship("Step", back_populates="replays")

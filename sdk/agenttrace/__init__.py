@@ -5,15 +5,13 @@ agenttrace-sdk
 Lightweight instrumentation library for tracing multi-step LLM agent
 pipelines into a local SQLite database.
 
-Public API (implemented in Phase 2):
-
     from agenttrace import Tracer, trace_step, record_usage
 
     tracer = Tracer(db_path="agenttrace.db")
     with tracer.start_run(name="my-agent-run"):
         with trace_step("search"):
             ...
-        with trace_step("summarize"):
+        with trace_step("summarize", step_type="llm_call"):
             ...
 
 - Tracer: owns a run's lifecycle (start/end) and the storage connection.
@@ -25,11 +23,8 @@ Public API (implemented in Phase 2):
   wrapped LLM client's response shape.
 """
 
-# TODO(Phase 2): implement Tracer, trace_step, record_usage in
-# tracer.py and re-export them here.
-#
-# from .tracer import Tracer, trace_step, record_usage
-#
-# __all__ = ["Tracer", "trace_step", "record_usage"]
+from .tracer import Tracer, record_usage, trace_step
+
+__all__ = ["Tracer", "trace_step", "record_usage"]
 
 __version__ = "0.1.0"

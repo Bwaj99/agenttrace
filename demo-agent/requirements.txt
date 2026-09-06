@@ -1,0 +1,6 @@
+# agenttrace-sdk is installed via the local editable package (see
+# docker-compose.yml / README) rather than listed here by version.
+
+# One of these two, depending on which API key is configured:
+openai>=1.30
+anthropic>=0.28

@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+build/
+dist/
+
+# SQLite trace data (generated locally / by the demo agent)
+*.db
+*.db-journal
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+
+# Env files
+.env
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/

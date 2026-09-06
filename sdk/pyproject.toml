@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agenttrace-sdk"
+version = "0.1.0"
+description = "Lightweight instrumentation SDK for tracing multi-step LLM agent pipelines locally."
+readme = "../README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "sqlalchemy>=2.0",
+]
+
+# Installed locally during development with:
+#   pip install -e .
+# from within the sdk/ directory.
+
+[tool.setuptools.packages.find]
+include = ["agenttrace*"]

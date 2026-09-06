@@ -1,0 +1,15 @@
+{
+  "name": "agenttrace-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Next.js dashboard for AgentTrace: runs list, timeline/tree view, step detail panel, and single-step replay UI.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "_note": "Real dependency versions (next, react, react-dom, tailwindcss, typescript, etc.) are pinned in Phase 5 when the app is scaffolded with create-next-app."
+}

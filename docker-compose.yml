@@ -1,0 +1,38 @@
+# AgentTrace docker-compose.yml
+#
+# Placeholder — full wiring happens in Phase 6. Planned shape:
+#
+# services:
+#   backend:
+#     build: ./backend
+#     ports:
+#       - "8000:8000"
+#     volumes:
+#       - trace-data:/data          # shared SQLite file lives here
+#     environment:
+#       - AGENTTRACE_DB_PATH=/data/agenttrace.db
+#
+#   frontend:
+#     build: ./frontend
+#     ports:
+#       - "3000:3000"
+#     environment:
+#       - NEXT_PUBLIC_API_URL=http://localhost:8000
+#     depends_on:
+#       - backend
+#
+#   demo-agent:
+#     build: ./demo-agent
+#     volumes:
+#       - trace-data:/data          # writes into the same SQLite file
+#     environment:
+#       - AGENTTRACE_DB_PATH=/data/agenttrace.db
+#       - OPENAI_API_KEY=${OPENAI_API_KEY}
+#       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+#     profiles: ["tools"]           # not started by `docker compose up`;
+#                                    # run on demand via `docker compose run demo-agent`
+#
+# volumes:
+#   trace-data:
+
+version: "3.9"

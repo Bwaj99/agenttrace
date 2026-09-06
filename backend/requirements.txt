@@ -1,0 +1,8 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+sqlalchemy>=2.0
+pydantic>=2.6
+
+# LLM clients used by the /replay endpoint (single-step LLM replay):
+openai>=1.30
+anthropic>=0.28

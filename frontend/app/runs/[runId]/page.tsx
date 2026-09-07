@@ -6,11 +6,11 @@ import { getRun } from "@/lib/api";
 import type { RunDetail, StepNode } from "@/lib/types";
 import StatusBadge from "@/components/StatusBadge";
 import SummaryBar from "@/components/SummaryBar";
-import StepTree from "@/components/StepTree";
+import StepWaterfall from "@/components/StepWaterfall";
 import StepDetailPanel from "@/components/StepDetailPanel";
 
-/** Run detail page ("/runs/[runId]"): cost/latency summary, the
- * nested step timeline, and a detail panel for the selected step. */
+/** Run detail page ("/runs/[runId]"): cost/latency summary, a
+ * time-scaled step waterfall, and a detail panel for the selected step. */
 export default function RunDetailPage({ params }: { params: { runId: string } }) {
   const { runId } = params;
   const [run, setRun] = useState<RunDetail | null>(null);
@@ -67,9 +67,9 @@ export default function RunDetailPage({ params }: { params: { runId: string } })
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
-        <div className="rounded-lg border border-gray-200 p-2 dark:border-gray-700">
-          <StepTree
-            steps={run.steps}
+        <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+          <StepWaterfall
+            run={run}
             selectedId={selected?.id ?? null}
             slowestId={run.slowest_step_id}
             onSelect={setSelected}

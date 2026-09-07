@@ -1,21 +1,10 @@
-import type { RunDetail, StepNode } from "@/lib/types";
+import type { RunDetail } from "@/lib/types";
 import { formatCost, formatDuration } from "@/lib/format";
-
-function flatten(steps: StepNode[]): StepNode[] {
-  const out: StepNode[] = [];
-  const walk = (list: StepNode[]) => {
-    for (const step of list) {
-      out.push(step);
-      walk(step.children);
-    }
-  };
-  walk(steps);
-  return out;
-}
+import { flattenSteps } from "@/lib/steps";
 
 /** Cost/latency summary bar shown at the top of a run detail page. */
 export default function SummaryBar({ run }: { run: RunDetail }) {
-  const slowest = flatten(run.steps).find((s) => s.id === run.slowest_step_id);
+  const slowest = flattenSteps(run.steps).find((s) => s.id === run.slowest_step_id);
   const totalTokens = run.total_prompt_tokens + run.total_completion_tokens;
 
   const tiles = [

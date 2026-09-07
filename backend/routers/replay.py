@@ -33,7 +33,10 @@ router = APIRouter(tags=["replay"])
 # rather than SDK auto-detection). Whichever provider's API key is
 # configured wins; matches the demo agent's single-provider approach.
 _DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
-_DEFAULT_ANTHROPIC_MODEL = "claude-3-5-sonnet-20241022"
+# Kept in sync with demo-agent/agent.py's ANTHROPIC_MODEL default — see the
+# comment there for why this needs occasional updating as Anthropic retires
+# old model snapshots.
+_DEFAULT_ANTHROPIC_MODEL = "claude-opus-5"
 
 
 def _extract_prompt(modified_input: Any) -> str:
@@ -90,9 +93,14 @@ def _call_anthropic(model: str, prompt: str) -> dict:
     import anthropic
 
     client = anthropic.Anthropic()
+    # No `output_config.effort` here (unlike the demo agent's fixed-model
+    # call): this replays whatever model the *original* step actually used,
+    # which the user could point at an older model via
+    # AGENTTRACE_ANTHROPIC_MODEL — `effort` 400s on some of those (e.g.
+    # Haiku 4.5), so leave it at the default rather than assume it's valid.
     response = client.messages.create(
         model=model,
-        max_tokens=1024,
+        max_tokens=4096,
         messages=[{"role": "user", "content": prompt}],
     )
     text = "".join(getattr(block, "text", "") for block in response.content)

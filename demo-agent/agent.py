@@ -36,7 +36,12 @@ DB_PATH = os.environ.get("AGENTTRACE_DB_PATH", "../agenttrace.db")
 OUTPUT_DIR = os.environ.get("AGENTTRACE_OUTPUT_DIR", "./output")
 
 OPENAI_MODEL = os.environ.get("AGENTTRACE_OPENAI_MODEL", "gpt-4o-mini")
-ANTHROPIC_MODEL = os.environ.get("AGENTTRACE_ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
+# claude-opus-5 is the current flagship model as of this writing. Anthropic
+# retires old dated snapshots over time (a retired model 404s with
+# "not_found_error"), so if this default ever starts failing, check
+# https://docs.claude.com/en/docs/about-claude/models for the current list
+# and override via AGENTTRACE_ANTHROPIC_MODEL rather than hardcoding a fix.
+ANTHROPIC_MODEL = os.environ.get("AGENTTRACE_ANTHROPIC_MODEL", "claude-opus-5")
 
 
 def _get_provider_and_client() -> Tuple[str, Optional[object]]:
@@ -94,7 +99,13 @@ def _call_llm(provider: str, client, prompt: str):
     if provider == "anthropic":
         return client.messages.create(
             model=ANTHROPIC_MODEL,
-            max_tokens=1024,
+            max_tokens=4096,
+            # This is a short summarization task, not hard reasoning — "low"
+            # effort keeps it fast/cheap. claude-opus-5 runs adaptive
+            # thinking by default even at low effort, and thinking tokens
+            # count against max_tokens, so this is sized to leave room for
+            # both.
+            output_config={"effort": "low"},
             messages=[{"role": "user", "content": prompt}],
         )
     return _mock_llm_response(prompt)

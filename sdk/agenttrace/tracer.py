@@ -87,10 +87,19 @@ _PRICING_PER_MILLION_TOKENS = {
     "gpt-4o": (2.50, 10.00),
     "gpt-4-turbo": (10.00, 30.00),
     "gpt-3.5-turbo": (0.50, 1.50),
-    "claude-3-5-sonnet": (3.00, 15.00),
-    "claude-3-5-haiku": (0.80, 4.00),
-    "claude-3-opus": (15.00, 75.00),
-    "claude-3-haiku": (0.25, 1.25),
+    # Current Claude model line (see docs.claude.com/en/docs/about-claude/models).
+    # Anthropic's newer model IDs carry no date suffix, so an exact prefix
+    # match stays valid until the model itself is retired — unlike the old
+    # dated-snapshot names (e.g. "claude-3-5-sonnet-20241022") this table
+    # used to key on.
+    "claude-fable-5-1": (10.00, 50.00),
+    "claude-opus-5": (5.00, 25.00),
+    "claude-opus-4-8": (5.00, 25.00),
+    "claude-opus-4-7": (5.00, 25.00),
+    "claude-opus-4-6": (5.00, 25.00),
+    "claude-sonnet-5": (2.00, 10.00),
+    "claude-sonnet-4-6": (3.00, 15.00),
+    "claude-haiku-4-5": (1.00, 5.00),
 }
 
 
